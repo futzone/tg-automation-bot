@@ -1,0 +1,22 @@
+# Linux serverda 24/7 ishlatish uchun systemd service.
+# 1) Loyihani /opt/tg-automation ga ko'chiring va u yerda .venv yarating
+# 2) sudo useradd --system --home /opt/tg-automation --shell /usr/sbin/nologin aibot
+#    sudo chown -R aibot:aibot /opt/tg-automation && sudo chmod 600 /opt/tg-automation/.env
+# 3) sudo cp aibot.service /etc/systemd/system/
+# 4) sudo systemctl daemon-reload && sudo systemctl enable --now aibot
+# Loglar: journalctl -u aibot -f
+[Unit]
+Description=Telegram AI auto-reply bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aibot
+WorkingDirectory=/opt/tg-automation
+ExecStart=/opt/tg-automation/.venv/bin/python bot.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

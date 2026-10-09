@@ -1,0 +1,263 @@
+# So'kinish filtri ro'yxati: har qatorda bitta so'z yoki ibora.
+# Faqat butun so'zlar mos keladi; katta-kichik harf, apostrof va takror harflar farqlanmaydi.
+# '=' bilan boshlangan so'z faqat apostrofi bilan aynan yozilganda mos keladi (=o'l so'zi "ol" ga mos kelmaydi).
+# O'zgartirgandan keyin botni qayta ishga tushiring.
+ablah
+adela
+adengmanu
+adeni sski
+ahmoq
+ahuel
+am
+am latta
+ambaliq
+ambosh
+amcha
+aminga
+aminga kutagim
+amingga ske
+amingni
+amini
+aminie
+ammisan
+amsikar
+apalaringni sikey
+axmoq
+axuyet
+ayeyni ishak siksin
+basharenga qotogm
+befarosat
+bibetta
+bich
+bitch
+biyingni
+bla
+blat
+ble
+blet
+blowjob
+blyat
+bo'qidish
+bo'qkalla
+bobongni skiy
+boqimni yepsan
+buvini ami
+buvini amiga ske
+buyingni
+chap tashog'i
+chichqoq
+chmo
+cho'choq
+cho'choqbosh
+chochok
+chochokbosh
+chort
+chumo
+da hafti basharet kerram
+dabba
+dadahanat
+dadahanaton gom
+dadanaton kerram
+dadangmanku
+dalban
+dalbayob
+dalbayop
+daun
+dinnaxuy
+dnx
+dovdir
+ey qetoq
+foxisha
+foxisha qanchiq
+fuck
+fuck of
+fuck you
+fucking
+gandon
+garang
+gay
+gey
+gnida
+gom
+gotalak
+goydet
+gul fokhsha
+haromi
+hunasa
+idi naxuy
+iflos
+iplos
+iprisqi
+isqirt
+it bachcha
+itbet
+jala ble
+jalab
+jalap
+jentra miyya
+jink
+jinnah
+jinni
+jipiriq
+kapak urish
+kashanda
+kazyol
+ker
+kerram
+khunasa
+khuy sasuy
+kispurosh
+kispurush
+ko'p mazgi qilma
+kop mazgi qma
+kot
+kot ekansan
+kotikh
+kotinga
+kus
+kuspuro'sh
+kutagimny ye
+kutingga skey
+kutok kalla
+lo'ttivoz
+lox
+manjalaqqi
+maraz
+meggom bla
+miyanga sikay
+mol miyya
+musr
+naxxuy
+nedagon
+nigga
+nigger
+o'siroq
+obi mane
+og'zinga qotag'im
+oghinga olish
+oghzinga qotoghim
+om
+onangni
+onangni ami
+onangni omi
+onangni sikay
+onasini emsin
+onayni sski
+onenei ami
+oneni ami
+oneni eshshe siksin
+oneni ski
+oneta gom
+onetta
+opangni omiga ske
+opela
+oppangni qo'tog'i
+otni qatag'i
+p1zdes
+pashol na xuy
+pashol naxxuy
+pasholak
+pedik
+pidaras
+pidaraz
+pidr
+pipez
+pizda
+pizdes
+pizdez
+pizdukcha
+poxxuy
+pzdc
+pzds
+qanchiq
+qanciq
+qanjiq
+qanju
+qataqxor
+qetoq
+qo'taq
+qo'toq
+qotaq ali
+qotaqxor
+qoto
+qotoqbosh
+qutoq
+qutoqbosh
+seks
+seksi baby
+sen qishloqlisan
+sex
+sexy woman
+shavqatsiz
+sik
+sikaman
+sikay
+sikdim
+sike
+siki
+sikish
+sikiy
+siktim
+siktir
+siktir jalap
+sikvotti
+skay
+ske
+skey
+suchka
+suka
+tashoq
+tashsho
+tashshoq
+tashshoq sho'rva
+tentak
+tente
+totaq
+totoq
+tupoy
+tvar
+tvariddin
+wtf
+xarip
+xaromi
+xarrom
+xorromi
+xuyeplet
+xuyesos
+xuyila
+ya yebal tebya
+yban
+ybat
+yebalay
+yeban
+yebanashka
+yebanutiy
+yebat
+yeblan
+yebnu
+yebu
+yetm
+yiban
+yiban dalbayob
+yibanat
+yobbana
+yubanashka
+yubban
+zaybal
+boq
+it
+jala
+mol
+=o'l
+yetim
+
+# Kundalik nutqda ko'p uchraydigani uchun o'chirib qo'yilganlar (yoqish uchun '# ' ni olib tashlang):
+# orqanga
+# orqenga
+# harom
+# pashmak
+# bulbulcha
+# shoshoncha
+# farosatinga
+# bachcha
+# ci words

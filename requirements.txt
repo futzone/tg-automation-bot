@@ -1,0 +1,3 @@
+aiogram>=3.31,<4
+anthropic>=1.12
+python-dotenv>=1.0
