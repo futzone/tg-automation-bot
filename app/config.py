@@ -39,7 +39,7 @@ def load_config() -> Config:
     return Config(
         bot_token=_required("BOT_TOKEN"),
         owner_id=int(_required("OWNER_ID")),
-        owner_name=os.getenv("OWNER_NAME", "Zamon").strip(),
+        owner_name=_required("OWNER_NAME"),
         anthropic_api_key=_required("ANTHROPIC_API_KEY"),
         model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5").strip(),
         max_tokens=int(os.getenv("MAX_TOKENS", "2000")),
