@@ -7,6 +7,7 @@ Siz band yoki offline bo'lganingizda shaxsiy Telegram chatlaringizga **sizning a
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![aiogram](https://img.shields.io/badge/aiogram-3.x-2CA5E0)
 ![Claude](https://img.shields.io/badge/LLM-Claude-D97757)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Nima qila oladi
 
@@ -104,3 +105,7 @@ app/owner.py        boshqaruv paneli
 badwords.txt        so'kinish filtri ro'yxati
 aibot.service       systemd service namunasi
 ```
+
+## Litsenziya
+
+[MIT](LICENSE) — erkin foydalaning, o'zgartiring va tarqating.
