@@ -85,7 +85,7 @@ Claude'ga toollar beriladi va suhbatdosh so'rasa, model o'zi chaqiradi (`app/ser
 | Hikmatli so'z | `api.quotable.io`, ishlamasa `zenquotes.io` |
 | Qiziq fakt | `uselessfacts.jsph.pl` |
 
-Suhbatdosh AI bilan 3 marta yozishgach (24 soat ichida), bot javobi oxirida bu xizmatlarni taklif qiladi. Taklif bitta chatda 7 kunda bir marta chiqadi.
+Suhbatdosh AI bilan 3 marta yozishgach (24 soat ichida), bot javobidan keyin bu xizmatlarni alohida xabar bilan taklif qiladi. Taklif matni o'zbek (lotin, kirill), rus va ingliz tillarida tayyor turadi; model faqat suhbatdosh tilini aniqlaydi. Taklif bitta chatda 7 kunda bir marta chiqadi.
 
 ## Rejalashtirilgan xabarlar
 

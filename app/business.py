@@ -14,7 +14,7 @@ from .config import Config
 from .db import Database
 from .llm import LLM
 from .moderation import BadWords
-from .prompt import MEDIA_NAMES, build_system_prompt, parse_reply
+from .prompt import MEDIA_NAMES, OFFER_TEXTS, build_system_prompt, parse_reply
 from .scheduler import create_schedule, format_schedule
 from .sender import notify, send_media, send_text
 from .services import TOOLS, ToolRunner
@@ -86,10 +86,17 @@ class Responder:
         )
 
     def _should_offer(self, chat_id: int) -> bool:
-        if self.db.count_llm_calls(chat_id, 86400) < OFFER_AFTER_REPLIES:
+        """AI javoblar soni (24 soatlik oyna) — limitdan alohida hisoblanadi, egasi yozganda tozalanmaydi."""
+        key, now = f"ai_replies:{chat_id}", int(time.time())
+        count, _, since = (self.db.get_setting(key) or "0|0").partition("|")
+        if now - int(since) > 86400:
+            count, since = "0", str(now)
+        count = int(count) + 1
+        self.db.set_setting(key, f"{count}|{since}")
+        if count < OFFER_AFTER_REPLIES:
             return False
         last = self.db.get_setting(f"offered:{chat_id}")
-        return not last or int(last) + OFFER_EVERY_SECONDS < time.time()
+        return not last or int(last) + OFFER_EVERY_SECONDS < now
 
     def reset_limits(self) -> None:
         self.db.clear_llm_calls()
@@ -137,7 +144,7 @@ class Responder:
             self.db.add_llm_call(chat_id)
             await self.bot.send_chat_action(chat_id, "typing", business_connection_id=conn_id)
             offer = self._should_offer(chat_id)
-            system = build_system_prompt(self.db, self.cfg.owner_name, self.cfg.timezone, chat_id, offer_services=offer)
+            system = build_system_prompt(self.db, self.cfg.owner_name, self.cfg.timezone, chat_id)
             history = self.db.get_history(chat_id, self.cfg.history_limit)
             runner = ToolRunner(self.cfg.timezone, self.db.get_setting("location_slug") or None)
             raw = await self.llm.reply(system, history, TOOLS, runner)
@@ -168,11 +175,20 @@ class Responder:
             await send_text(self.bot, self.db, chat_id, conn_id, parsed.text)
             self.db.add_history(chat_id, "assistant", parsed.text)
             if offered:
-                self.db.set_setting(f"offered:{chat_id}", str(int(time.time())))
+                await self._send_offer(chat_id, conn_id)
             if self.cfg.report_every_reply:
                 await self._notify(f"🤖 {label} ga javob berildi:\n\n{parsed.text}")
         if parsed.notify:
             await self._notify(f"🔔 {label}: {parsed.notify}")
+
+    async def _send_offer(self, chat_id: int, conn_id: str) -> None:
+        """Qo'shimcha xizmatlar taklifi — javobdan keyin alohida xabar, suhbatdosh tilida."""
+        self.db.set_setting(f"offered:{chat_id}", str(int(time.time())))
+        user_messages = [text for role, text in self.db.get_history(chat_id, 10) if role == "user"]
+        lang = await self.llm.detect_language(user_messages)
+        text = OFFER_TEXTS[lang].format(owner=self.cfg.owner_name)
+        await send_text(self.bot, self.db, chat_id, conn_id, text)
+        self.db.add_history(chat_id, "assistant", text)
 
     async def _notify(self, text: str) -> None:
         await notify(self.bot, self.cfg.owner_id, text)

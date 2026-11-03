@@ -14,6 +14,11 @@ _EMOJI_RE = re.compile(
 )
 MAX_TOOL_ROUNDS = 3
 ToolRunner = Callable[[str, dict], Awaitable[str]]
+LANGS = ("uz", "uz_cyrl", "ru", "en")
+LANG_SYSTEM = (
+    "Identify the language and script of the person's chat messages. Answer with exactly one code and nothing "
+    "else: uz (Uzbek, Latin script), uz_cyrl (Uzbek, Cyrillic script), ru (Russian), en (English or any other)."
+)
 EMOJI_SYSTEM = (
     "Suhbatdosh messenjerda stiker yubordi. Senga o'sha stikerning emojisi beriladi. "
     "Unga do'stona javob sifatida mos keladigan bitta emoji qaytar. "
@@ -62,17 +67,18 @@ class LLM:
         prompt: str,
         tools: list[dict] | None = None,
         run_tool: ToolRunner | None = None,
+        max_tokens: int | None = None,
     ) -> str:
-        """Tarixsiz, bitta so'rov (jadval tahlili, rejalashtirilgan xabar yozish)."""
-        return await self._run(system, [{"role": "user", "content": prompt}], tools, run_tool)
+        """Tarixsiz, bitta so'rov (jadval tahlili, rejalashtirilgan xabar, tarjima)."""
+        return await self._run(system, [{"role": "user", "content": prompt}], tools, run_tool, max_tokens)
 
-    async def _run(self, system: str, messages: list[dict], tools, run_tool) -> str:
+    async def _run(self, system: str, messages: list[dict], tools, run_tool, max_tokens: int | None = None) -> str:
         """Model tool chaqirsa, natijasini qaytarib beradi va yakuniy matnni oladi."""
         extra = {"tools": tools} if tools and run_tool else {}
         for _ in range(MAX_TOOL_ROUNDS + 1):
             resp = await self.client.messages.create(
                 model=self.model,
-                max_tokens=self.max_tokens,
+                max_tokens=max_tokens or self.max_tokens,
                 system=system,
                 messages=messages,
                 **extra,
@@ -89,6 +95,25 @@ class LLM:
         if resp.stop_reason == "max_tokens":
             log.warning("Javob MAX_TOKENS (%s) limitida uzilib qoldi", self.max_tokens)
         return "".join(b.text for b in resp.content if b.type == "text").strip()
+
+    async def detect_language(self, user_messages: list[str]) -> str:
+        """Suhbatdosh tili: uz, uz_cyrl, ru yoki en. Xato bo'lsa uz."""
+        sample = "\n".join(f"- {m}" for m in user_messages[-4:])
+        if not sample:
+            return "uz"
+        try:
+            resp = await self.client.messages.create(
+                model=self.model,
+                max_tokens=10,
+                thinking={"type": "disabled"},
+                system=LANG_SYSTEM,
+                messages=[{"role": "user", "content": sample}],
+            )
+        except Exception:  # noqa: BLE001
+            log.exception("Tilni aniqlab bo'lmadi")
+            return "uz"
+        answer = "".join(b.text for b in resp.content if b.type == "text").strip().lower()
+        return next((code for code in sorted(LANGS, key=len, reverse=True) if code in answer), "uz")
 
     async def pick_emoji(self, emoji: str) -> str:
         """Stiker emojisiga javoban bitta emoji. Har bir emoji uchun model faqat bir marta chaqiriladi."""

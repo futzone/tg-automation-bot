@@ -22,16 +22,52 @@ SERVICES = (
     "hikmatli so'z yoki qiziq fakt so'rasa (masalan «kurs», «ob-havo», «namoz», «wiki Amir Temur», «tarixda bugun», "
     "«iqtibos», «fakt» deb yozsa), tegishli toolni chaqir. Natijani suhbatdosh yozgan tilda qisqa va tushunarli "
     "yetkaz: inglizcha matnni tarjima qil, hikmatli so'zda muallifni ko'rsat, kursni so'mda yoz. "
-    "Bu ma'lumotlarni hech qachon o'ylab topma: tool xato qaytarsa, hozir olib bo'lmaganini ayt."
+    "Bu ma'lumotlarni hech qachon o'ylab topma: tool xato qaytarsa, hozir olib bo'lmaganini ayt. "
+    "Suhbatdosh nima qila olishingni so'rasa, shu imkoniyatlarni kalit so'zlari bilan sanab ber."
 )
-OFFER = (
-    "## Xizmatlarni taklif qilish\n"
-    "Suhbatdosh sen bilan bir necha marta yozishdi. Bu javobingning oxiriga, alohida xatboshi qilib, qisqa taklif "
-    "qo'sh: {owner} javob berguncha suhbatdosh quyidagilarni yozib ko'rishi mumkin: «kurs» (valyuta kursi), "
-    "«ob-havo», «namoz» (namoz vaqtlari), «wiki <mavzu>» (Vikipediyadan qisqacha), «tarixda bugun», «iqtibos», "
-    "«fakt». Taklifni suhbatdosh yozgan tilga tarjima qil, kalit so'zlarni ham shu tilda yoz. "
-    "Agar javobing {skip} bo'lsa, taklif qo'shma."
-)
+# Suhbatdosh AI bilan bir necha marta yozishgach, alohida xabar bo'lib uning tilida yuboriladi
+OFFER_TEXTS = {
+    "uz": (
+        "💡 {owner} javob berguncha bular ham qo'limdan keladi, shunchaki yozing:\n"
+        "«kurs» — valyuta kursi\n"
+        "«ob-havo» — Toshkent va Buxoro ob-havosi\n"
+        "«namoz» — bugungi namoz vaqtlari\n"
+        "«wiki Amir Temur» — Vikipediyadan qisqacha\n"
+        "«tarixda bugun» — shu kuni tarixda nima bo'lgan\n"
+        "«iqtibos» — hikmatli so'z\n"
+        "«fakt» — qiziq fakt"
+    ),
+    "uz_cyrl": (
+        "💡 {owner} жавоб бергунча булар ҳам қўлимдан келади, шунчаки ёзинг:\n"
+        "«курс» — валюта курси\n"
+        "«об-ҳаво» — Тошкент ва Бухоро об-ҳавоси\n"
+        "«намоз» — бугунги намоз вақтлари\n"
+        "«wiki Амир Темур» — Википедиядан қисқача\n"
+        "«тарихда бугун» — шу куни тарихда нима бўлган\n"
+        "«иқтибос» — ҳикматли сўз\n"
+        "«факт» — қизиқ факт"
+    ),
+    "ru": (
+        "💡 Пока {owner} не ответил, я могу ещё вот что, просто напишите:\n"
+        "«курс» — курс валют\n"
+        "«погода» — погода в Ташкенте и Бухаре\n"
+        "«намаз» — время намаза на сегодня\n"
+        "«вики Амир Темур» — кратко из Википедии\n"
+        "«этот день в истории» — что произошло в этот день\n"
+        "«цитата» — мудрое изречение\n"
+        "«факт» — интересный факт"
+    ),
+    "en": (
+        "💡 While {owner} is away, I can also help with these, just type:\n"
+        "«rates» — currency exchange rates\n"
+        "«weather» — weather in Tashkent and Bukhara\n"
+        "«prayer times» — today's prayer times\n"
+        "«wiki Amir Temur» — a short Wikipedia summary\n"
+        "«on this day» — what happened on this day in history\n"
+        "«quote» — a wise quote\n"
+        "«fact» — a fun fact"
+    ),
+}
 
 
 def build_system_prompt(
@@ -40,10 +76,8 @@ def build_system_prompt(
     tz: str,
     chat_id: int | None = None,
     username: str | None = None,
-    offer_services: bool = False,
 ) -> str:
-    """chat_id yoki username berilsa, shu suhbatdosh uchun yozilgan alohida qoidalar ham qo'shiladi.
-    offer_services=True bo'lsa, model javob oxirida qo'shimcha xizmatlarni taklif qiladi."""
+    """chat_id yoki username berilsa, shu suhbatdosh uchun yozilgan alohida qoidalar ham qo'shiladi."""
     persona = db.get_setting("persona", DEFAULT_PERSONA)
     rules = db.list_rules()
     knowledge = db.list_knowledge()
@@ -104,8 +138,6 @@ def build_system_prompt(
             + "\n".join(f"- [MEDIA:{m['id']}] ({MEDIA_NAMES[m['kind']]}): {m['condition']}" for m in media)
         )
     parts.append(SERVICES)
-    if offer_services:
-        parts.append(OFFER.format(owner=owner_name, skip=SKIP_TAG))
     parts.append(
         "## Umumiy yo'riqnoma\n"
         "- Qisqa, tabiiy va samimiy yoz, xuddi messenjerdagidek. Suhbatdosh qaysi tilda yozsa, shu tilda javob ber.\n"
@@ -146,9 +178,12 @@ def parse_reply(raw: str) -> ParsedReply:
     raw = _strip_partial_tag(raw.strip())
     notify = None
     if NOTIFY_TAG in raw:
+        # Bildirishnoma — teg qatoridagi bir jumla. Model undan keyin yana nimadir yozgan bo'lsa,
+        # u suhbatdoshga tegishli: javobga qaytariladi.
         before, _, after = raw.partition(NOTIFY_TAG)
-        raw = before.strip()
-        notify = after.strip() or "Muhim xabar"
+        note, _, rest = after.strip().partition("\n")
+        raw = (before.strip() + "\n\n" + rest.strip()).strip()
+        notify = note.strip() or "Muhim xabar"
     found = MEDIA_RE.search(raw)
     media_id = int(found[1]) if found else None
     raw = MEDIA_RE.sub("", raw).strip()

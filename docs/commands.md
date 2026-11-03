@@ -155,6 +155,10 @@ Suhbatdosh namoz vaqtini so'rasa ham bot shu hudud bo'yicha javob beradi (boshqa
 
 Suhbatdosh botdan valyuta kursi, ob-havo, namoz vaqti, Vikipediya ma'lumoti, «tarixda bugun», hikmatli so'z yoki qiziq fakt so'rashi mumkin (masalan «kurs», «ob-havo», «wiki Amir Temur»). Javob suhbatdosh yozgan tilda bo'ladi. Suhbatdosh AI bilan 3 marta yozishgach, bot bu imkoniyatlarni o'zi taklif qiladi. Sinash: `/test kurs`.
 
+## Forward qilingan xabarlar
+
+Botga istalgan matnli xabarni (masalan inglizcha maqola yoki post) forward qilsangiz, bot uni o'zbekchaga to'liq tarjima qiladi va mazmunini sodda tilda tushuntiradi. Faqat matndagi ma'lumotga tayanadi, o'zidan fakt yoki xulosa qo'shmaydi. Bir nechta xabarni birga forward qilsangiz (uzun maqola), ular bitta matn sifatida ko'riladi. Forward qilingan matn qoida bo'lib saqlanmaydi; forward qilingan GIF, stiker va `.txt` fayllar odatdagidek saqlanadi.
+
 ## Hozirgi holatingiz
 
 Holat o'rnatilsa, bot suhbatdoshlarga hozir qayerda ekaningizni va javob bera olmasligingizni aytadi.

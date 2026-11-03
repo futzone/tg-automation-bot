@@ -1,4 +1,5 @@
 """Botning o'z chatidagi boshqaruv paneli (faqat egasi uchun)."""
+import asyncio
 import html
 import io
 import logging
@@ -32,6 +33,21 @@ from .utils import split_text
 
 log = logging.getLogger(__name__)
 MAX_FILE_BYTES = 200_000
+FORWARD_BATCH_SECONDS = 2.0  # birga forward qilingan xabarlar shu oraliqda keladi va bitta matn bo'ladi
+EXPLAIN_MAX_TOKENS = 8000
+EXPLAIN_SYSTEM = """Sen {owner}ning shaxsiy yordamchisisan. {owner} senga boshqa joydan xabar (maqola, post, xabar)
+forward qildi. Vazifang:
+1. Matn o'zbek tilida bo'lmasa, uni o'zbek tiliga to'liq va aniq tarjima qil. Hech narsani tashlab ketma,
+   qisqartirma. Matn o'zbekcha bo'lsa, bu qismni yozma.
+2. Keyin mazmunini sodda o'zbek tilida tushuntir: asosiy fikrlar, nima demoqchi, muhim joylari.
+   Murakkab atama yoki qisqartmalarni faqat matndagi kontekst asosida izohla.
+
+Qat'iy qoida: faqat matnda bor ma'lumotga tayan. O'zingdan fakt, raqam, sana, ism, misol, fikr, baho yoki
+xulosa qo'shma; matnda aytilmagan narsani taxmin qilma. Biror joy noaniq bo'lsa, «matnda aniq aytilmagan» de.
+
+Format: Telegram uchun oddiy matn, markdown belgilarisiz (** yoki # ishlatma). Bo'limlar boshida:
+🌐 Tarjima
+💡 Izoh"""
 
 HELP = """🤖 Boshqaruv paneli
 
@@ -94,6 +110,10 @@ Hozirgi holatingiz (suhbatdoshlarga shuni aytadi):
 /statuses — holatlar ro'yxati
 /newstatus <nom> <tavsif> — o'z holatingizni qo'shish, keyin /<nom>
 /delstatus <nom> — o'zingiz qo'shgan holatni o'chirish
+
+Forward qilingan xabarlar:
+Menga istalgan matnli xabarni (masalan inglizcha maqolani) forward qiling — o'zbekchaga tarjima qilib,
+mazmunini tushuntirib beraman. O'zimdan ma'lumot qo'shmayman.
 
 Boshqaruv:
 /test <xabar> — bot qanday javob berishini sinash (hech kimga yuborilmaydi)
@@ -362,6 +382,41 @@ def create_owner_router(owner_id: int) -> Router:
             f"✅ {MEDIA_NAMES[kind]} #{mid} saqlandi. Qachon yuboriladi: {condition}\n"
             f"Ro'yxat: /media, sinash: /test <xabar>"
         )
+
+    forward_buffer: list[Message] = []
+    forward_task: list[asyncio.Task] = []
+
+    async def explain_forwarded(llm: LLM, cfg: Config) -> None:
+        await asyncio.sleep(FORWARD_BATCH_SECONDS)
+        batch = sorted(forward_buffer, key=lambda m: m.message_id)
+        forward_buffer.clear()
+        forward_task.clear()
+        text = "\n\n".join((m.text or m.caption or "").strip() for m in batch).strip()
+        first = batch[0]
+        await first.bot.send_chat_action(first.chat.id, "typing")
+        try:
+            raw = await llm.complete(
+                EXPLAIN_SYSTEM.format(owner=cfg.owner_name), f"Forward qilingan matn:\n\n{text}",
+                max_tokens=EXPLAIN_MAX_TOKENS,
+            )
+        except Exception as e:  # noqa: BLE001
+            log.exception("Forward qilingan xabarni tushuntirib bo'lmadi")
+            await first.answer(f"⚠️ Xato: {type(e).__name__}: {e}")
+            return
+        for chunk in split_text(raw.strip() or "Bo'sh javob keldi."):
+            await first.answer(chunk)
+
+    @router.message(F.forward_origin & (F.text | F.caption) & ~F.sticker & ~F.animation)
+    async def on_forward(message: Message, llm: LLM, cfg: Config):
+        """Botga forward qilingan matnni tarjima qilib, tushuntirib beradi (qoida sifatida saqlanmaydi)."""
+        forward_buffer.append(message)
+        if not forward_task:
+            forward_task.append(asyncio.create_task(explain_forwarded(llm, cfg)))
+
+    @router.message(F.forward_origin & ~F.sticker & ~F.animation & ~F.document)
+    async def on_forward_no_text(message: Message):
+        # Forward qilingan GIF/stiker va fayllar odatdagidek saqlanadi (pastdagi handlerlar)
+        await message.answer("Forward qilingan xabarda matn yo'q. Tarjima uchun matnli xabar yuboring.")
 
     @router.message(F.sticker | F.animation)
     async def on_media(message: Message, db: Database):
