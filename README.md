@@ -12,9 +12,14 @@ Siz band yoki offline bo'lganingizda shaxsiy Telegram chatlaringizga **sizning a
 ## Nima qila oladi
 
 - **Sizning nomingizdan javob beradi.** Suhbatdosh sizga yozadi, javob sizning akkauntingizdan keladi. Qoidalar va bilimlarni botning o'z chatida o'rgatasiz.
+- **Har kimga o'zicha javob beradi.** `/for @ali Uni «Aliboy» deb chaqir` kabi bitta odam uchun alohida qoida yozish mumkin: laqab, "sen"/"siz", ohang.
 - **Hozirgi holatingizni biladi.** `/bus`, `/sleep`, `/meeting` kabi bitta buyruq bilan qayerdaligingizni aytasiz, bot suhbatdoshlarga shuni yetkazadi.
 - **Siz yozsangiz, chetga chiqadi.** Chatda o'zingiz javob bersangiz, bot o'sha chatda vaqtincha jim turadi.
-- **Keraksiz joyda javob bermaydi.** "ok", "rahmat", stiker kabi xabarlarni o'tkazib yuboradi; ketma-ket kelgan xabarlarga bitta javob yozadi.
+- **GIF va stiker yuboradi.** Botga GIF yoki stiker yuborib, qachon ishlatilishini yozasiz; mos xabarga matn o'rniga o'shani yuboradi. Stikerga esa mos emoji bilan javob beradi.
+- **Xabarlarni rejalashtiradi.** `/schedule har juma 08:00 da Sardorga "Juma muborak" deb yubor` yoki `bugun 21:00 da Oybekni chiroyli tabrikla` — bir martalik yoki takroriy; AI har safar yangi matn yozishi mumkin.
+- **Foydali xizmatlar.** Suhbatdosh «kurs», «ob-havo», «namoz», «wiki <mavzu>», «tarixda bugun», «iqtibos», «fakt» desa, o'z tilida javob oladi. Sizga esa `/namoz`.
+- **Chatni boshqarish.** Chatning o'zida `#clear` — botning barcha xabarlarini o'chirish, `#pause` — shu chatda jim turish.
+- **Keraksiz joyda javob bermaydi.** GIF, video, audio va rasmlarga javob bermaydi; "ok", "rahmat", stiker kabi xabarlarni o'tkazib yuboradi; ketma-ket kelgan xabarlarga bitta javob yozadi.
 - **Muhim xabarni sizga yetkazadi.** Shoshilinch yoki shaxsan aralashuvingiz kerak bo'lgan xabar haqida botda bildirishnoma yuboradi.
 - **Suiiste'moldan himoyalangan.** So'kingan suhbatdoshni ogohlantiradi va takrorlansa javob berishni to'xtatadi; bitta chatga AI javoblar soni cheklangan.
 - **Faqat sizniki.** Bot bitta egaga xizmat qiladi; boshqa akkauntlar ulansa, e'tiborsiz qoldiriladi.
@@ -62,11 +67,16 @@ Hammasi botning o'z chatida, oddiy buyruqlar bilan:
 | Buyruq | Vazifasi |
 |---|---|
 | `/add <matn>` yoki oddiy matn | Qoida qo'shish |
+| `/for @username <matn>` | Faqat shu odam uchun qoida (laqab, murojaat...) |
 | `/persona <matn>` | O'zingiz haqingizda tavsif |
 | `.txt` / `.md` fayl yuborish | Bilim bazasiga qo'shish (FAQ, narxlar...) |
+| GIF yoki stiker yuborish | Matn o'rniga yuboriladigan javob sifatida saqlash |
 | `/bus`, `/sleep`, `/work`... | Hozirgi holatingiz; `/bus 40` — 40 daqiqaga |
 | `/free` | Holatni o'chirish |
 | `/test <xabar>` | Javobni hech kimga yubormasdan sinash |
+| `/schedule <so'rov>` | Xabarni rejalashtirish; `/schedules`, `/sdel` |
+| `/namoz`, `/location <hudud>` | Namoz vaqtlari va hudud |
+| `#clear`, `#pause`, `#resume` (chatda) | Bot xabarlarini o'chirish / shu chatda jim turish |
 | `/pause`, `/resume` | Botni to'xtatish / yoqish |
 | `/status` | Joriy holat |
 
@@ -98,7 +108,12 @@ app/config.py       .env sozlamalari
 app/db.py           SQLite: qoidalar, bilimlar, tarix, pauzalar, limitlar
 app/llm.py          Claude API
 app/prompt.py       system prompt, [SKIP] / [NOTIFY] tahlili
-app/business.py     shaxsiy chatlarga javob berish, limit va so'kinish cheklovi
+app/business.py     shaxsiy chatlarga javob berish, limit va so'kinish cheklovi, %buyruqlar
+app/scheduler.py    rejalashtirilgan xabarlar
+app/services.py     kurs, ob-havo, namoz, Vikipediya va boshqa toollar
+app/sender.py       xabar yuborish (ID lar %clear uchun saqlanadi)
+app/rich.py         Telegram rich xabarlarini (jadval, ro'yxat) matnga aylantirish
+app/markup.py       model Markdown'ini Telegram HTML'iga aylantirish
 app/status.py       holat shablonlari (/bus, /sleep...)
 app/moderation.py   so'kinish filtri
 app/owner.py        boshqaruv paneli
