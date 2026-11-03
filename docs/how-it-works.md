@@ -24,7 +24,7 @@ Suhbatdosh sizga yozganda quyidagilar tartib bilan tekshiriladi:
 7. **Debounce.** Bot `DEBOUNCE_SECONDS` soniya kutadi. Shu orada yangi xabar kelsa, hisob qaytadan boshlanadi. Shunday qilib ketma-ket xabarlarga bitta javob yoziladi.
 8. **Pauza, `/pause` yoki chatda `%pause`?** Faol bo'lsa, javob berilmaydi.
 9. **Stikermi?** Bo'lsa, bot AI siz emoji bilan javob beradi (pastga qarang).
-10. **AI limiti.** Tugagan bo'lsa, tayyor matn yuboriladi.
+10. **AI limiti.** Tugagan bo'lsa, tayyor matn bir marta yuboriladi, keyin bot limit tugaguncha jim turadi.
 11. **Claude chaqiriladi** (kerak bo'lsa toollar bilan: kurs, ob-havo, namoz...) va javob (yoki tayyor GIF/stiker) yuboriladi.
 
 Siz javob kutilayotgan paytda o'zingiz yozib qo'ysangiz, bot tayyorlagan javobini yubormaydi.

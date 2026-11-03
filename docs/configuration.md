@@ -34,8 +34,8 @@ Modelning javobdan oldingi "o'ylash" tokenlari ham shu chegaraga kiradi. Qiymat 
 
 Bitta suhbatdosh `RATE_LIMIT_MINUTES` daqiqa ichida `RATE_LIMIT_COUNT` tadan ortiq AI javob ololmaydi. Limit tugagach:
 
-- AI chaqirilmaydi, bot har safar tayyor matnni (`RATE_LIMIT_MESSAGE`) yuboradi;
-- sizga 🚦 bildirishnoma keladi (har bir chat uchun bir marta).
+- AI chaqirilmaydi, bot tayyor matnni (`RATE_LIMIT_MESSAGE`) **bir marta** yuboradi va limit tugaguncha jim turadi;
+- sizga 🚦 bildirishnoma keladi.
 
 Limit qachon tozalanadi:
 

@@ -103,15 +103,19 @@ class Responder:
         self.limited.clear()
 
     async def _send_limit_message(self, chat_id: int, conn_id: str, label: str) -> None:
-        """Limit tugaganda AI chaqirilmaydi, tayyor matn yuboriladi."""
+        """Limit tugaganda AI chaqirilmaydi. Tayyor matn faqat bir marta yuboriladi, keyin bot limit
+        tugaguncha jim turadi (har xabarga bir xil matn qaytarish bot buzilgandek ko'rinadi)."""
+        if chat_id in self.limited:
+            return
+        self.limited.add(chat_id)
         text = self.cfg.rate_limit_message or LIMIT_TEXT.format(owner=self.cfg.owner_name)
         await send_text(self.bot, self.db, chat_id, conn_id, text)
-        if chat_id not in self.limited:
-            self.limited.add(chat_id)
-            await self._notify(
-                f"🚦 {label} juda ko'p yozyapti: {self.cfg.rate_limit_minutes} daqiqada "
-                f"{self.cfg.rate_limit_count} ta AI javob limiti tugadi, endi tayyor matn yuborilyapti."
-            )
+        self.db.add_history(chat_id, "assistant", text)
+        await self._notify(
+            f"🚦 {label} juda ko'p yozyapti: {self.cfg.rate_limit_minutes} daqiqada "
+            f"{self.cfg.rate_limit_count} ta AI javob limiti tugadi. Bot unga bir marta «band» deb yozdi "
+            "va limit tugaguncha jim turadi."
+        )
 
     async def rebuke(self, chat_id: int, conn_id: str, label: str) -> None:
         """So'kingan suhbatdoshni ogohlantiradi, takrorlansa javob berishni to'xtatadi."""
