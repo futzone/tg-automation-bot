@@ -129,6 +129,7 @@ Bir martalik yoki takroriy xabar. Oddiy tilda yozasiz, bot jadvalni o'zi tushuna
 ```
 
 - Matn qo'shtirnoqda yoki "... deb yubor" shaklida bo'lsa, **aynan shu matn** ketadi. Nima yozishni tasvirlasangiz ("tabrikla", "eslat"), **AI** har safar yangi matn yozadi.
+- Bitta so'rovda bir nechta sana bo'lishi mumkin: masalan oylik xarajatlar jadvalini (Telegram jadvali yoki oddiy matn) yuborsangiz, har bir to'lov kuni uchun alohida eslatma yaratiladi.
 - Vaqt aytilmasa, 09:00 olinadi. Turlar: bir martalik, har kuni, har hafta, har oy, har yili.
 - Yuborilgach sizga 📤 nusxa keladi. `/pause` va `%pause` rejalashtirilgan xabarlarga ta'sir qilmaydi.
 - **Telegram cheklovi:** bot faqat oxirgi 24 soatda faol bo'lgan chatlarga yoza oladi. Yuborib bo'lmasa, bot sizga ⚠️ va tayyor matnni yuboradi.

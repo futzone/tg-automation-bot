@@ -40,11 +40,18 @@ Hozirgi vaqt: {now} ({tz}).
 {target}
 
 Faqat bitta JSON obyekt qaytar, boshqa hech narsa yozma:
-{{"chat_id": <son yoki null>, "kind": "once|daily|weekly|monthly|yearly", "date": "YYYY-MM-DD" yoki null,
-"time": "HH:MM", "weekday": <0=dushanba ... 6=yakshanba> yoki null, "day": <1-31> yoki null,
-"month": <1-12> yoki null, "mode": "text|ai", "content": "...", "error": null}}
+{{"chat_id": <son yoki null>, "error": null, "items": [
+  {{"kind": "once|daily|weekly|monthly|yearly", "date": "YYYY-MM-DD" yoki null, "time": "HH:MM",
+   "weekday": <0=dushanba ... 6=yakshanba> yoki null, "day": <1-31> yoki null, "month": <1-12> yoki null,
+   "mode": "text|ai", "content": "..."}}
+]}}
 
 Qoidalar:
+- Odatda items da bitta element bo'ladi. So'rovda bir nechta sana bo'lsa (masalan jadval: har qatorda xizmat,
+  summa va to'lov kuni), har bir sana uchun alohida element yoz. Bir kunga to'g'ri keladigan qatorlarni
+  bitta xabarga birlashtir. Har bir xabar o'zi tushunarli bo'lsin: nima, qancha, qachon (jadvaldagi
+  ma'lumotlarni to'liq ko'chir). So'rovdagi umumiy izohlarni (masalan "narxlar o'zgarishi mumkin")
+  kerakli joyda saqla.
 - once — bir martalik, date to'ldiriladi ("bugun", "ertaga", "15-noyabr" ni hozirgi sanaga nisbatan hisobla).
 - daily — har kuni. weekly — har hafta, weekday. monthly — har oy, day. yearly — har yili, month va day.
 - Vaqt aytilmagan bo'lsa "09:00". "Kechqurun 9" — 21:00, "tushdan keyin 3" — 15:00.
@@ -182,7 +189,7 @@ async def create_schedule(llm: LLM, db: Database, cfg: Config, request: str, cha
         data = json.loads(found[0]) if found else {}
     except json.JSONDecodeError:
         data = {}
-    if data.get("error"):
+    if data.get("error") and not data.get("items"):
         return f"⚠️ Tushunmadim: {data['error']}"
     try:
         target_id = int(data.get("chat_id"))
@@ -193,20 +200,37 @@ async def create_schedule(llm: LLM, db: Database, cfg: Config, request: str, cha
             "⚠️ Kimga yuborishni aniqlay olmadim. /schedule @username <so'rov> yoki /schedule <ID> <so'rov> deb yozing, "
             "yoki o'sha odam bilan chatning o'zida %schedule <so'rov> yozing."
         )
-    checked = _validate(data)
-    if isinstance(checked, str):
-        return f"⚠️ Tushunmadim: {checked}. Masalan: «har juma 08:00 da 'Juma muborak' deb yubor»."
-    kind, spec = checked
-    mode = "text" if data.get("mode") == "text" else "ai"
-    content = str(data.get("content") or "").strip()
-    if not content:
-        return "⚠️ Nima yuborishni tushunmadim."
-    nxt = next_run(kind, spec, cfg.timezone, time.time())
-    if nxt is None:
-        return f"⚠️ Bu vaqt ({describe(kind, spec)}) o'tib ketgan."
-    sid = db.add_schedule(target_id, kind, json.dumps(spec), mode, content, nxt)
-    row = next(r for r in db.list_schedules(target_id) if r["id"] == sid)
-    return f"✅ Rejalashtirildi\n\n{format_schedule(row, cfg.timezone)}\n\nRo'yxat: /schedules, bekor qilish: /sdel {sid}"
+    items = data.get("items")
+    if not isinstance(items, list):
+        items = [data]  # eski format: bitta jadval
+    created, problems = [], []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        checked = _validate(item)
+        content = str(item.get("content") or "").strip()
+        if isinstance(checked, str) or not content:
+            reason = checked if isinstance(checked, str) else "matn yo'q"
+            problems.append(f"«{content[:60] or '?'}»: {reason}")
+            continue
+        kind, spec = checked
+        nxt = next_run(kind, spec, cfg.timezone, time.time())
+        if nxt is None:
+            problems.append(f"{describe(kind, spec)} — vaqti o'tib ketgan")
+            continue
+        mode = "text" if item.get("mode") == "text" else "ai"
+        created.append(db.add_schedule(target_id, kind, json.dumps(spec), mode, content, nxt))
+    if not created:
+        detail = "; ".join(problems) or "jadvalni aniqlab bo'lmadi"
+        return f"⚠️ Tushunmadim: {detail}. Masalan: «har juma 08:00 da 'Juma muborak' deb yubor»."
+    rows = {r["id"]: r for r in db.list_schedules(target_id)}
+    title = "✅ Rejalashtirildi" if len(created) == 1 else f"✅ {len(created)} ta xabar rejalashtirildi"
+    body = "\n\n".join(format_schedule(rows[sid], cfg.timezone) for sid in created)
+    text = f"{title}\n\n{body}"
+    if problems:
+        text += "\n\n⚠️ Qo'shilmadi: " + "; ".join(problems)
+    ids = " ".join(f"/sdel {sid}" for sid in created)
+    return text + f"\n\nRo'yxat: /schedules, bekor qilish: {ids}"
 
 
 class Scheduler:

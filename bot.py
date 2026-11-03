@@ -14,6 +14,7 @@ from app.db import Database
 from app.llm import LLM
 from app.moderation import BadWords
 from app.owner import create_owner_router, create_stranger_router, setup_commands
+from app.rich import RichMessageMiddleware
 from app.scheduler import Scheduler
 
 
@@ -30,6 +31,9 @@ async def main() -> None:
     badwords = BadWords(BASE_DIR / "badwords.txt")
 
     dp = Dispatcher(db=db, llm=llm, cfg=cfg, responder=responder, badwords=badwords)
+    rich = RichMessageMiddleware()
+    dp.message.outer_middleware(rich)
+    dp.business_message.outer_middleware(rich)
     dp.include_routers(create_owner_router(cfg.owner_id), business_router, create_stranger_router())
 
     me = await bot.get_me()

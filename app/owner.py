@@ -1,6 +1,7 @@
 """Botning o'z chatidagi boshqaruv paneli (faqat egasi uchun)."""
 import html
 import io
+import logging
 import re
 import time
 from datetime import datetime
@@ -29,6 +30,7 @@ from .services import DEFAULT_PRAYER_REGION, TOOLS, ToolRunner, format_prayer_ti
 from .status import DEFAULT_PRESETS, NAME_RE, all_presets, preset_name, split_duration
 from .utils import split_text
 
+log = logging.getLogger(__name__)
 MAX_FILE_BYTES = 200_000
 
 HELP = """🤖 Boshqaruv paneli
@@ -688,7 +690,8 @@ def create_owner_router(owner_id: int) -> Router:
 
     @router.message()
     async def unknown(message: Message):
-        await message.answer("Noma'lum buyruq. Yordam: /help")
+        log.info("Tushunilmagan xabar turi: %s", message.content_type)
+        await message.answer(f"Bu turdagi xabarni ({message.content_type}) tushunmadim. Yordam: /help")
 
     return router
 
