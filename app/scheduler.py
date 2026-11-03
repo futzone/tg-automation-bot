@@ -280,7 +280,8 @@ class Scheduler:
             text = row["content"] if row["mode"] == "text" else await self.compose(chat_id, row["content"])
             if not text:
                 raise RuntimeError("AI bo'sh javob qaytardi")
-            await send_text(self.bot, self.db, chat_id, conn_id, text)
+            # Aniq matn rejimida egasining matni o'zgarishsiz ketadi
+            await send_text(self.bot, self.db, chat_id, conn_id, text, markdown=row["mode"] == "ai")
             self.db.add_history(chat_id, "assistant", text)
             log.info("Rejalashtirilgan xabar #%s chat %s ga yuborildi", row["id"], chat_id)
             await notify(self.bot, self.cfg.owner_id, f"📤 Rejalashtirilgan xabar #{row['id']} {label} ga yuborildi:\n\n{text}")

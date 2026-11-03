@@ -3,16 +3,30 @@ import logging
 import sqlite3
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest
 
 from .db import Database
+from .markup import md_to_html
 from .utils import split_text
 
 log = logging.getLogger(__name__)
 
 
-async def send_text(bot: Bot, db: Database, chat_id: int, conn_id: str, text: str) -> None:
+async def send_text(
+    bot: Bot, db: Database, chat_id: int, conn_id: str, text: str, markdown: bool = True
+) -> None:
+    """markdown=True: model yozgan **qalin**, `kod` va h.k. Telegram formatiga o'giriladi."""
     for chunk in split_text(text):
-        msg = await bot.send_message(chat_id, chunk, business_connection_id=conn_id)
+        msg = None
+        if markdown:
+            try:
+                msg = await bot.send_message(
+                    chat_id, md_to_html(chunk), parse_mode="HTML", business_connection_id=conn_id
+                )
+            except TelegramBadRequest as e:
+                log.warning("HTML formatda yuborib bo'lmadi (%s), oddiy matn yuboriladi", e)
+        if msg is None:
+            msg = await bot.send_message(chat_id, chunk, parse_mode=None, business_connection_id=conn_id)
         db.add_sent(chat_id, msg.message_id, conn_id)
 
 

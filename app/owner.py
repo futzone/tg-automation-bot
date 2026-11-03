@@ -9,6 +9,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import (
     BotCommand,
@@ -24,6 +25,7 @@ from .business import STRIKE_LIMIT, Responder
 from .config import Config
 from .db import Database
 from .llm import LLM
+from .markup import md_to_html
 from .prompt import DEFAULT_PERSONA, MEDIA_NAMES, build_system_prompt, parse_reply
 from .scheduler import create_schedule, format_schedule
 from .sender import send_media
@@ -45,7 +47,8 @@ forward qildi. Vazifang:
 Qat'iy qoida: faqat matnda bor ma'lumotga tayan. O'zingdan fakt, raqam, sana, ism, misol, fikr, baho yoki
 xulosa qo'shma; matnda aytilmagan narsani taxmin qilma. Biror joy noaniq bo'lsa, «matnda aniq aytilmagan» de.
 
-Format: Telegram uchun oddiy matn, markdown belgilarisiz (** yoki # ishlatma). Bo'limlar boshida:
+Format: Telegram uchun oddiy matn. Sarlavha (#) va jadval ishlatma; kerak bo'lsa **qalin** va
+qisqa ro'yxat (- bilan) mumkin. Bo'limlar boshida:
 🌐 Tarjima
 💡 Izoh"""
 
@@ -174,6 +177,15 @@ PICK_KEYBOARD = ReplyKeyboardMarkup(
 )
 USERNAME_RE = re.compile(r"@([A-Za-z0-9_]{4,32})")
 CONTACTS_SHOWN = 30
+
+
+async def answer_md(message: Message, text: str) -> None:
+    """Model yozgan Markdown'ni suhbatdosh ko'radigan formatda ko'rsatadi."""
+    for chunk in split_text(text):
+        try:
+            await message.answer(md_to_html(chunk), parse_mode="HTML")
+        except TelegramBadRequest:
+            await message.answer(chunk)
 
 
 def contact_label(contact) -> str:
@@ -403,8 +415,7 @@ def create_owner_router(owner_id: int) -> Router:
             log.exception("Forward qilingan xabarni tushuntirib bo'lmadi")
             await first.answer(f"⚠️ Xato: {type(e).__name__}: {e}")
             return
-        for chunk in split_text(raw.strip() or "Bo'sh javob keldi."):
-            await first.answer(chunk)
+        await answer_md(first, raw.strip() or "Bo'sh javob keldi.")
 
     @router.message(F.forward_origin & (F.text | F.caption) & ~F.sticker & ~F.animation)
     async def on_forward(message: Message, llm: LLM, cfg: Config):
@@ -513,8 +524,7 @@ def create_owner_router(owner_id: int) -> Router:
         out = f"🧪 Bot javobi{whom}:\n\n" + (parsed.text or "(javob bermaydi — [SKIP])")
         if parsed.notify:
             out += f"\n\n🔔 Sizga bildirishnoma: {parsed.notify}"
-        for chunk in split_text(out):
-            await message.answer(chunk)
+        await answer_md(message, out)
 
     @router.message(Command("pause"))
     async def cmd_pause(message: Message, db: Database):

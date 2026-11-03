@@ -113,6 +113,7 @@ app/scheduler.py    rejalashtirilgan xabarlar
 app/services.py     kurs, ob-havo, namoz, Vikipediya va boshqa toollar
 app/sender.py       xabar yuborish (ID lar %clear uchun saqlanadi)
 app/rich.py         Telegram rich xabarlarini (jadval, ro'yxat) matnga aylantirish
+app/markup.py       model Markdown'ini Telegram HTML'iga aylantirish
 app/status.py       holat shablonlari (/bus, /sleep...)
 app/moderation.py   so'kinish filtri
 app/owner.py        boshqaruv paneli
