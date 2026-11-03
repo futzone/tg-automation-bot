@@ -14,6 +14,7 @@ from app.db import Database
 from app.llm import LLM
 from app.moderation import BadWords
 from app.owner import create_owner_router, create_stranger_router, setup_commands
+from app.scheduler import Scheduler
 
 
 async def main() -> None:
@@ -37,7 +38,11 @@ async def main() -> None:
         logging.warning("⚠️ BotFather'da Business Mode yoqilmagan! /mybots → Bot Settings → Business Mode")
     await setup_commands(bot, cfg.owner_id, db)
     await bot.delete_webhook(drop_pending_updates=False)
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    scheduler = asyncio.create_task(Scheduler(bot, db, llm, cfg).run())
+    try:
+        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    finally:
+        scheduler.cancel()
 
 
 if __name__ == "__main__":

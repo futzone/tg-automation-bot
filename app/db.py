@@ -41,6 +41,26 @@ CREATE TABLE IF NOT EXISTS presets (
     name TEXT PRIMARY KEY,
     text TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,          -- 'sticker' yoki 'animation' (GIF)
+    file_id TEXT NOT NULL,
+    condition TEXT NOT NULL,     -- qachon yuborilishi
+    created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS contacts (
+    chat_id INTEGER PRIMARY KEY, -- shaxsiy chatda suhbatdoshning Telegram ID si
+    name TEXT NOT NULL,
+    username TEXT,               -- kichik harflarda, @ siz
+    updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS person_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER,             -- ID yoki username orqali topiladi (biri bo'sh bo'lishi mumkin)
+    username TEXT,
+    text TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS llm_calls (
     chat_id INTEGER NOT NULL,
     ts INTEGER NOT NULL
@@ -49,6 +69,27 @@ CREATE INDEX IF NOT EXISTS idx_llm_calls_chat ON llm_calls(chat_id, ts);
 CREATE TABLE IF NOT EXISTS strikes (
     chat_id INTEGER PRIMARY KEY,
     count INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sent_messages (  -- bot yuborgan xabarlar (%clear uchun)
+    chat_id INTEGER NOT NULL,
+    message_id INTEGER NOT NULL,
+    conn_id TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    PRIMARY KEY (chat_id, message_id)
+);
+CREATE TABLE IF NOT EXISTS muted_chats (    -- %pause: bot shu chatda javob bermaydi
+    chat_id INTEGER PRIMARY KEY,
+    until_ts INTEGER                        -- NULL: %resume gacha
+);
+CREATE TABLE IF NOT EXISTS schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,          -- once, daily, weekly, monthly, yearly
+    spec TEXT NOT NULL,          -- JSON: time, date, weekday, day, month
+    mode TEXT NOT NULL,          -- 'text' (aynan shu matn) yoki 'ai' (AI topshiriq bo'yicha yozadi)
+    content TEXT NOT NULL,
+    next_ts INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
 );
 """
 
@@ -93,6 +134,78 @@ class Database:
 
     def delete_knowledge(self, kid: int) -> bool:
         cur = self.conn.execute("DELETE FROM knowledge WHERE id = ?", (kid,))
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    # ---------- tayyor GIF va stikerlar ----------
+    def add_media(self, kind: str, file_id: str, condition: str) -> int:
+        cur = self.conn.execute(
+            "INSERT INTO media(kind, file_id, condition, created_at) VALUES (?, ?, ?, ?)",
+            (kind, file_id, condition, int(time.time())),
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def list_media(self) -> list[sqlite3.Row]:
+        return self.conn.execute("SELECT id, kind, file_id, condition FROM media ORDER BY id").fetchall()
+
+    def get_media(self, media_id: int) -> sqlite3.Row | None:
+        return self.conn.execute(
+            "SELECT id, kind, file_id, condition FROM media WHERE id = ?", (media_id,)
+        ).fetchone()
+
+    def delete_media(self, media_id: int) -> bool:
+        cur = self.conn.execute("DELETE FROM media WHERE id = ?", (media_id,))
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    # ---------- suhbatdoshlar va ularga alohida qoidalar ----------
+    def save_contact(self, chat_id: int, name: str, username: str | None) -> None:
+        self.conn.execute(
+            "INSERT INTO contacts(chat_id, name, username, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(chat_id) DO UPDATE SET name = excluded.name, "
+            "username = excluded.username, updated_at = excluded.updated_at",
+            (chat_id, name, username.lower() if username else None, int(time.time())),
+        )
+        self.conn.commit()
+
+    def get_contact(self, chat_id: int) -> sqlite3.Row | None:
+        return self.conn.execute("SELECT * FROM contacts WHERE chat_id = ?", (chat_id,)).fetchone()
+
+    def find_contact(self, username: str) -> sqlite3.Row | None:
+        return self.conn.execute(
+            "SELECT * FROM contacts WHERE username = ?", (username.lower(),)
+        ).fetchone()
+
+    def list_contacts(self, limit: int) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM contacts ORDER BY updated_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+
+    def add_person_rule(self, chat_id: int | None, username: str | None, text: str) -> int:
+        cur = self.conn.execute(
+            "INSERT INTO person_rules(chat_id, username, text, created_at) VALUES (?, ?, ?, ?)",
+            (chat_id, username.lower() if username else None, text, int(time.time())),
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def person_rules(self, chat_id: int | None, username: str | None) -> list[sqlite3.Row]:
+        """Shu suhbatdoshga tegishli qoidalar: ID yoki username bo'yicha."""
+        return self.conn.execute(
+            "SELECT id, text FROM person_rules WHERE chat_id = ? OR username = ? ORDER BY id",
+            (chat_id, username.lower() if username else None),
+        ).fetchall()
+
+    def list_person_rules(self) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT r.id, r.chat_id, r.username, r.text, c.name FROM person_rules r "
+            "LEFT JOIN contacts c ON c.chat_id = r.chat_id OR (r.chat_id IS NULL AND c.username = r.username) "
+            "GROUP BY r.id ORDER BY r.id"
+        ).fetchall()
+
+    def delete_person_rule(self, rule_id: int) -> bool:
+        cur = self.conn.execute("DELETE FROM person_rules WHERE id = ?", (rule_id,))
         self.conn.commit()
         return cur.rowcount > 0
 
@@ -182,6 +295,10 @@ class Database:
         ).fetchone()
         return bool(row and row["until_ts"] > time.time())
 
+    def unpause_chat(self, chat_id: int) -> None:
+        self.conn.execute("DELETE FROM chat_pause WHERE chat_id = ?", (chat_id,))
+        self.conn.commit()
+
     def clear_pauses(self) -> None:
         self.conn.execute("DELETE FROM chat_pause")
         self.conn.commit()
@@ -241,3 +358,86 @@ class Database:
 
     def get_connection(self, conn_id: str) -> sqlite3.Row | None:
         return self.conn.execute("SELECT * FROM connections WHERE id = ?", (conn_id,)).fetchone()
+
+    def owner_connection(self, owner_id: int) -> str | None:
+        row = self.conn.execute(
+            "SELECT id FROM connections WHERE user_id = ? AND enabled = 1 ORDER BY can_reply DESC LIMIT 1",
+            (owner_id,),
+        ).fetchone()
+        return row["id"] if row else None
+
+    # ---------- bot yuborgan xabarlar ----------
+    def add_sent(self, chat_id: int, message_id: int, conn_id: str) -> None:
+        self.conn.execute(
+            "INSERT OR IGNORE INTO sent_messages(chat_id, message_id, conn_id, ts) VALUES (?, ?, ?, ?)",
+            (chat_id, message_id, conn_id, int(time.time())),
+        )
+        self.conn.commit()
+
+    def sent_messages(self, chat_id: int) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT message_id, conn_id FROM sent_messages WHERE chat_id = ? ORDER BY message_id", (chat_id,)
+        ).fetchall()
+
+    def forget_sent(self, chat_id: int, message_ids: list[int]) -> None:
+        self.conn.executemany(
+            "DELETE FROM sent_messages WHERE chat_id = ? AND message_id = ?", [(chat_id, m) for m in message_ids]
+        )
+        self.conn.commit()
+
+    # ---------- %pause: chatda javob bermaslik ----------
+    def mute_chat(self, chat_id: int, seconds: int | None) -> None:
+        until = int(time.time()) + seconds if seconds else None
+        self.conn.execute(
+            "INSERT INTO muted_chats(chat_id, until_ts) VALUES (?, ?) "
+            "ON CONFLICT(chat_id) DO UPDATE SET until_ts = excluded.until_ts",
+            (chat_id, until),
+        )
+        self.conn.commit()
+
+    def unmute_chat(self, chat_id: int) -> bool:
+        cur = self.conn.execute("DELETE FROM muted_chats WHERE chat_id = ?", (chat_id,))
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    def is_chat_muted(self, chat_id: int) -> bool:
+        row = self.conn.execute("SELECT until_ts FROM muted_chats WHERE chat_id = ?", (chat_id,)).fetchone()
+        return bool(row and (row["until_ts"] is None or row["until_ts"] > time.time()))
+
+    def list_muted(self) -> list[sqlite3.Row]:
+        self.conn.execute("DELETE FROM muted_chats WHERE until_ts IS NOT NULL AND until_ts <= ?", (int(time.time()),))
+        self.conn.commit()
+        return self.conn.execute(
+            "SELECT m.chat_id, m.until_ts, c.name, c.username FROM muted_chats m "
+            "LEFT JOIN contacts c ON c.chat_id = m.chat_id ORDER BY m.chat_id"
+        ).fetchall()
+
+    # ---------- rejalashtirilgan xabarlar ----------
+    def add_schedule(self, chat_id: int, kind: str, spec: str, mode: str, content: str, next_ts: int) -> int:
+        cur = self.conn.execute(
+            "INSERT INTO schedules(chat_id, kind, spec, mode, content, next_ts, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (chat_id, kind, spec, mode, content, next_ts, int(time.time())),
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def list_schedules(self, chat_id: int | None = None) -> list[sqlite3.Row]:
+        sql = (
+            "SELECT s.*, c.name, c.username FROM schedules s LEFT JOIN contacts c ON c.chat_id = s.chat_id"
+        )
+        if chat_id is not None:
+            return self.conn.execute(sql + " WHERE s.chat_id = ? ORDER BY s.next_ts", (chat_id,)).fetchall()
+        return self.conn.execute(sql + " ORDER BY s.next_ts").fetchall()
+
+    def due_schedules(self, now: int) -> list[sqlite3.Row]:
+        return self.conn.execute("SELECT * FROM schedules WHERE next_ts <= ? ORDER BY next_ts", (now,)).fetchall()
+
+    def set_schedule_next(self, sid: int, next_ts: int) -> None:
+        self.conn.execute("UPDATE schedules SET next_ts = ? WHERE id = ?", (next_ts, sid))
+        self.conn.commit()
+
+    def delete_schedule(self, sid: int) -> bool:
+        cur = self.conn.execute("DELETE FROM schedules WHERE id = ?", (sid,))
+        self.conn.commit()
+        return cur.rowcount > 0

@@ -30,6 +30,8 @@ def describe_message(message: Message) -> str:
         return "[video-xabar (dumaloq) yubordi]"
     if message.video:
         return f"[video yubordi]{caption}"
+    if message.animation:
+        return f"[GIF yubordi]{caption}"
     if message.document:
         return f"[fayl yubordi: {message.document.file_name}]{caption}"
     if message.sticker:
